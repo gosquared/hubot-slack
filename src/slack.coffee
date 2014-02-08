@@ -18,14 +18,33 @@ class Slack extends Adapter
   send: (params, strings...) ->
     @log "Sending message"
     user = @userFromParams params
-
     strings.forEach (str) =>
-      str = @escapeHtml str
-      args = JSON.stringify
-        username : @robot.name
-        channel  : user.reply_to
-        text     : str
+      args = ''
 
+      # Special slack-specific format. Allows changing username/icon
+      # and adding attachments as per the api
+      if "object" == typeof str
+        args =
+          username : @robot.name
+          channel : user.reply_to
+          text : ''
+        args.text = @escapeHtml str.text if str.text?
+        args.username = str.username if str.username?
+        if str.icon?
+          if str.icon.charAt(0) == ':'
+            args.icon_emoji = str.icon
+          else
+            args.icon_url = str.icon
+        args.attachments = str.attachments if str.attachments?
+        args = JSON.stringify args
+      else
+        str = @escapeHtml str
+        args = JSON.stringify
+          username : @robot.name
+          channel  : user.reply_to
+          text     : str
+
+      console.log args
       @post "/services/hooks/hubot", args
 
   reply: (params, strings...) ->
@@ -102,8 +121,6 @@ class Slack extends Adapter
     # Return an author object
     id       : req.param 'user_id'
     name     : req.param 'user_name'
-    reply_to : req.param 'channel_id'
-    room     : req.param 'channel_name'
 
 
   ###################################################################
@@ -124,6 +141,9 @@ class Slack extends Adapter
 
       hubotMsg = self.getMessageFromRequest req
       author = self.getAuthorFromRequest req
+      author = self.robot.brain.userForId author.id, author
+      author.reply_to = req.param 'channel_id'
+      author.room = req.param 'channel_name'
 
       if hubotMsg and author
         # Pass to the robot
