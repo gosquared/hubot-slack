@@ -16,7 +16,7 @@ class Slack extends Adapter
   # robot.respond, robot.listen, etc.
   ###################################################################
   send: (params, strings...) ->
-    @log "Sending message"
+    # @log "Sending message"
     user = @userFromParams params
     strings.forEach (str) =>
       args = ''
@@ -44,11 +44,10 @@ class Slack extends Adapter
           channel  : user.reply_to
           text     : str
 
-      console.log args
       @post "/services/hooks/hubot", args
 
   reply: (params, strings...) ->
-    @log "Sending reply"
+    # @log "Sending reply"
 
     user = @userFromParams params
     strings.forEach (str) =>
@@ -137,7 +136,7 @@ class Slack extends Adapter
 
     # Listen to incoming webhooks from slack
     self.robot.router.post "/hubot/slack-webhook", (req, res) ->
-      self.log "Incoming message received"
+      # self.log "Incoming message received"
 
       hubotMsg = self.getMessageFromRequest req
       author = self.getAuthorFromRequest req
@@ -147,7 +146,7 @@ class Slack extends Adapter
 
       if hubotMsg and author
         # Pass to the robot
-        self.log "Received #{hubotMsg} from #{author.name}"
+        # self.log "Received #{hubotMsg} from #{author.name}"
         self.receive new TextMessage(author, hubotMsg)
 
       # Just send back an empty reply, since our actual reply,
