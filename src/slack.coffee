@@ -16,7 +16,7 @@ class Slack extends Adapter
   # robot.respond, robot.listen, etc.
   ###################################################################
   send: (params, strings...) ->
-    # @log "Sending message"
+    @log "Sending message"
     user = @userFromParams params
     strings.forEach (str) =>
       args = ''
@@ -25,9 +25,10 @@ class Slack extends Adapter
       # and adding attachments as per the api
       if "object" == typeof str
         args =
-          username : @robot.name
-          channel : user.reply_to
-          text : ''
+          username   : @robot.name
+          channel    : user.reply_to
+          text       : ''
+          link_names : @options.link_names
         args.text = @escapeHtml str.text if str.text?
         args.username = str.username if str.username?
         if str.icon?
@@ -40,14 +41,15 @@ class Slack extends Adapter
       else
         str = @escapeHtml str
         args = JSON.stringify
-          username : @robot.name
-          channel  : user.reply_to
-          text     : str
+          username   : @robot.name
+          channel    : user.reply_to
+          text       : str
+          link_names : @options.link_names
 
       @post "/services/hooks/hubot", args
 
   reply: (params, strings...) ->
-    # @log "Sending reply"
+    @log "Sending reply"
 
     user = @userFromParams params
     strings.forEach (str) =>
@@ -57,6 +59,22 @@ class Slack extends Adapter
     # TODO: Set the topic
 
 
+  custom: (message, data)->
+    @log "Sending custom message"
+    user = @userFromParams message
+
+    attachment =
+      text     : @escapeHtml data.text
+      fallback : @escapeHtml data.fallback
+      pretext  : @escapeHtml data.pretext
+      color    : data.color
+      fields   : data.fields
+    args = JSON.stringify
+      username    : @robot.name
+      channel     : user.reply_to
+      attachments : [attachment]
+      link_names  : @options.link_names
+    @post "/services/hooks/hubot", args
   ###################################################################
   # HTML helpers.
   ###################################################################
@@ -106,6 +124,7 @@ class Slack extends Adapter
       name  : process.env.HUBOT_SLACK_BOTNAME or 'slackbot'
       mode  : process.env.HUBOT_SLACK_CHANNELMODE or 'blacklist'
       channels: process.env.HUBOT_SLACK_CHANNELS?.split(',') or []
+      link_names: process.env.HUBOT_SLACK_LINK_NAMES or 0
 
   getMessageFromRequest: (req) ->
     # Parse the payload
@@ -134,19 +153,21 @@ class Slack extends Adapter
     return @logError "No services token provided to Hubot" unless @options.token
     return @logError "No team provided to Hubot" unless @options.team
 
+    @robot.on 'slack-attachment', (payload)=>
+      @custom(payload.message, payload.content)
+
     # Listen to incoming webhooks from slack
     self.robot.router.post "/hubot/slack-webhook", (req, res) ->
-      # self.log "Incoming message received"
+      self.log "Incoming message received"
 
       hubotMsg = self.getMessageFromRequest req
       author = self.getAuthorFromRequest req
       author = self.robot.brain.userForId author.id, author
-      author.reply_to = req.param 'channel_id'
       author.room = req.param 'channel_name'
+      author.reply_to = req.param 'channel_id'
 
       if hubotMsg and author
         # Pass to the robot
-        # self.log "Received #{hubotMsg} from #{author.name}"
         self.receive new TextMessage(author, hubotMsg)
 
       # Just send back an empty reply, since our actual reply,

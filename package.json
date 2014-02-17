@@ -1,6 +1,6 @@
 {
   "name": "hubot-slack",
-  "version": "1.6.1",
+  "version": "2.0.0",
   "author": {
     "name": "Tiny Speck",
     "url": "https://www.tinyspeck.com/"
@@ -18,6 +18,10 @@
     },
     {
       "name": "Patrick Connolly"
+    },
+    {
+      "name": "Chip Hayner",
+      "email": "chayner@centresource.com"
     }
   ],
   "keywords": [
